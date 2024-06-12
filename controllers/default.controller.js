@@ -86,4 +86,14 @@ const getBlogs = async (req,res) => {
   }
 }
 
-module.exports = { registerUser, loginUser, getBlog, getBlogs };
+const logoutUser = async (req, res) => {
+    try {
+      res.clearCookie("token");
+      res.status(200).json({ success: true, message: "User logged out successfully" });
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ success: false, message: "An error occurred while logging out" });
+    }
+  }
+
+module.exports = { registerUser, loginUser, getBlog, getBlogs, logoutUser };
