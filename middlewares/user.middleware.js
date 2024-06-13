@@ -20,14 +20,4 @@ const checkIfAdmin = (req, res, next) => {
   next();
 }
 
-const checkIfUser = (req, res, next) => {
-    const role = getLoggedInUserRole(req);
-
-  if (role !== "user") {
-    return res.status(401).json({ success: false, message: "You are not authorized to access this route" });
-  }
-
-  next();
-}
-
-module.exports = { validateUser , checkIfAdmin, checkIfUser }
+module.exports = { validateUser , checkIfAdmin }
