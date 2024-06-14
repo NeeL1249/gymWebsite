@@ -19,6 +19,6 @@ const querySchema = new mongoose.Schema({
     }
 })
 
-const queryModel = await mongoose.model('Query', querySchema);
+const queryModel = mongoose.model('Query', querySchema);
 
 module.exports = queryModel;
