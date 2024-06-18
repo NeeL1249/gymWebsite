@@ -78,9 +78,80 @@ const createBlog = async (req, res) => {
     }
   }
 
+  const createPlan = async(req,res) => { 
+    const { name, description, price } = req.body;
+    const features = req.body.features.split(",");
+    const localFilePath = req.file.path;
+
+    if (!name || !description || !price || !features || !req.file) {
+        return res.status(400).json({ message: "Please provide all the required fields." });
+    }
+
+    try {
+        const imageUrl = await uploadImage(localFilePath);
+
+        if (!imageUrl) {
+            return res.status(500).json({ message: 'Failed to upload image.' });
+        }
+
+        await PlanModel.create({
+            name: name,
+            description: description,
+            price: price,
+            features: features,
+            tile_image: imageUrl
+        });
+
+        res.status(200).json({ success: true, message: "Plan created successfully." });
+    } catch (err) {
+        console.error('Error occurred while creating the plan:', err);
+        res.status(500).json({ message: "Some error occurred while creating the plan." });
+    }
+  }
+
+  const updatePlan = async(req,res) => {
+    try {
+      const planId = req.params.planId;
+      const { name,description,price,features } = req.body;
+      const plan = await PlanModel.findById(planId);
+      if(name !== undefined){
+        plan.name = name;
+      }
+      if(description !== undefined){
+        plan.description = description;
+      }
+      if(price !== undefined){
+        plan.price = price;
+      }
+      if(features !== undefined){
+        plan.features = features.split(",");
+      }
+      await plan.save();
+      res.status(200).json({success:true,message:"Plan updated successfully."})
+    }
+    catch (err) {
+      console.log(err)
+      res.status(500).json({message:"Some error occured while updating the plan."})
+    }
+  }
+
+  const deletePlan = async(req,res) => {
+    try {
+      const planId = req.params.planId;
+      await PlanModel.findByIdAndDelete(planId);
+      res.status(200).json({success:true,message:"Plan deleted successfully."})
+    } catch (err) {
+      console.log(err)
+      res.status(500).json({message:"Some error occured while deleting the plan."})
+    }
+  }
+
   module.exports = {
     getQueries,
     createBlog,
     updateBlog,
-    deleteBlog
+    deleteBlog,
+    createPlan,
+    updatePlan,
+    deletePlan
   };

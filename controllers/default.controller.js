@@ -84,6 +84,30 @@ const loginUser = async (req, res) => {
     }
   }
 
+  const editProfile = async (req,res) => {
+    try {
+      const userId = getLoggedInUserId(req);
+      const { name, dob, phoneNumber } = req.body;
+      const user = await UserModel.findById(userId);
+      if(name !== undefined){
+        user.name = name;
+      }
+      if(dob !== undefined){
+        user.date_of_birth = dob;
+      }
+      if(phoneNumber !== undefined){
+        user.phone_number = phoneNumber;
+      }
+      await user.save();
+      res.status(200).json({success:true,message:"Profile updated successfully."})
+    } catch (err) {
+      console.log(err)
+      res.status(500).json({message:"Some error occured while updating the profile."})
+    }
+  }
+  
+  
+
   const forgetPassword = async (req,res) => {
     try {
       const { email } = req.body;
@@ -156,14 +180,118 @@ const loginUser = async (req, res) => {
     res.status(200).json({ success: true, message: "User logged out successfully" });
   };
 
+  
+const commentBlog = async (req,res) => {
+  try {
+    const { blogId,commentContent } = req.body;
+    console.log(req.body)
+    const userId = getLoggedInUserId(req);
+    console.log(userId)
+    
+    const blog = await BlogModel.findById(blogId);
+    const user = await UserModel.findById(userId);
+
+    const comment = {
+      creator: userId,
+      content: commentContent,
+      createdAt: new Date()
+    };
+    console.log(user)
+    blog.comments.push(comment);
+    user.commentedPosts.push(blogId);
+    await blog.save();
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Comment added successfully", comment });
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({message: " Some error occured while commenting. "});
+  }
+}
+
+const replyComment = async (req,res) => {
+const { commentId,replyContent } = req.body;
+try {
+  const comment = await BlogModel.comments.findById(commentId)
+  const userId = getLoggedInUserId(req)
+  
+  const reply = new Comment({
+    creator: userId,
+    content: replyContent,
+    createdAt: new Date()
+  })
+  await reply.save()
+
+  comment.replies.push(reply._id)
+  await comment.save()
+
+  res.status(200).json({success:true,message:"Replied to the comment successfully"})
+} catch (error) {
+  console.log(error)
+  res.status(500).json({success:false, message:"Some Error Occured while replying."})
+}
+}
+
+const editComment = async (req,res) => {
+try {
+  const commentId = req.params.commentId;
+  const { commentContent } = req.body;
+  const comment = await CommentModel.findById(commentId);
+  comment.content = commentContent;
+  await comment.save();
+  res.status(200).json({success:true,message:"Comment edited successfully."})
+} catch (error) {
+  console.log(error)
+  res.status(500).json({success:false, message:"Some Error Occured while editing the comment."})
+}
+}
+
+const deleteComment = async (req,res) => {
+try {
+  const commentId = req.params.commentId;
+  await CommentModel.findByIdAndDelete(commentId);
+  res.status(200).json({success:true,message:"Comment deleted successfully."})
+} catch (err) {
+  console.log(err)
+  res.status(500).json({message:"Some error occured while deleting the comment."})
+}
+}
+
+const getPlans = async (req,res) => {
+  try {
+    const plans = await PlanModel.find();
+    res.status(200).json({success:true,plans})
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({success:false,message:"Some error occured while getting the plans."})
+  }
+}
+
+const getPlan = async (req,res) => {
+  try {
+    const planId = req.params.planId;
+    const plan = await PlanModel.findById(planId);
+    res.status(200).json({success:true,plan})
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({success:false,message:"Some error occured while getting the plan."})
+  }
+}
 
 module.exports = { 
   queries,
   registerUser, 
   loginUser, 
+  editProfile,
   changePassword, 
   forgetPassword, 
   getBlog, 
   getBlogs, 
-  logoutUser 
+  logoutUser,
+  commentBlog,
+  replyComment,
+  editComment,
+  deleteComment,
+  getPlans,
+  getPlan
 };

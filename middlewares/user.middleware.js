@@ -1,4 +1,5 @@
-const { getLoggedInUserRole } = require("../utils/auth.utils");
+const { getLoggedInUserRole, getLoggedInUserId } = require("../utils/auth.utils");
+const UserModel = require("../models/user.model");
 
 const validateUser = (req, res, next) => {
   const { email, password } = req.body;
@@ -20,4 +21,35 @@ const checkIfAdmin = (req, res, next) => {
   next();
 }
 
-module.exports = { validateUser , checkIfAdmin }
+const checkIfUserRegistered = async (req, res, next) => {
+  const userId = getLoggedInUserId(req);
+  if (!userId) {
+    return res.status(401).json({ success: false, message: "You are not authorized to access this route" });
+  }
+  const userExists = await UserModel.findById(userId);
+  if (!userExists) {
+    return res.status(401).json({ success: false, message: "You are not authorized to access this route" });
+  }
+  next();
+}
+
+const checkIfUserExists = async (req, res, next) => {
+  const { email } = req.body;
+  const userExists = await UserModel.findOne({ email });
+  if (!userExists) {
+    return res.status(401).json({ success: false, message: "User does not exist" });
+  }
+  next();
+}
+
+const checkIfCommentRelatedToUser = async (req, res, next) => {
+  const userId = getLoggedInUserId(req);
+  const commentId = req.params.commentId;
+  const comment = await CommentModel.findById({ _id: commentId });
+  if (comment.creator.toString() !== userId) {
+    return res.status(401).json({ success: false, message: "You are not authorized to access this route" });
+  }
+  next();
+}
+
+module.exports = { validateUser , checkIfAdmin , checkIfUserRegistered , checkIfUserExists , checkIfCommentRelatedToUser }

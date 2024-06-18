@@ -1,11 +1,7 @@
 const mongoose = require('mongoose');
 
-const BlogSchema = new mongoose.Schema({
+const CommentSchema = new mongoose.Schema({
   creator: {
-    type: String,
-    required: true
-  },
-  title: {
     type: String,
     required: true
   },
@@ -17,16 +13,12 @@ const BlogSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  tile_image : {
-    type: String,
-    required: true
-  },
-  comments: [{
+  replies: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Comment'
   }]
 });
 
-const BlogModel = mongoose.model('Blog', BlogSchema);
+const CommentModel = mongoose.model('Comment', CommentSchema);
 
-module.exports = BlogModel;
+module.exports = CommentModel;
