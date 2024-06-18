@@ -1,5 +1,6 @@
 const BlogModel = require("../models/blog.model");
 const UserModel = require("../models/user.model");
+const uploadImage = require('../utils/cloudinary');
 const { getLoggedInUserId } = require("../utils/auth.utils");
 
 const getQueries = async (req,res) => {
@@ -12,23 +13,40 @@ const getQueries = async (req,res) => {
     }
 }
 
-const createBlog = async (req,res) => {
-    const { title,content } = req.body ;
-    try{
+const createBlog = async (req, res) => {
+  const { title, content } = req.body;
+  
+  res.set('Content-Type', 'application/json');
+
+  if (!title || !content || !req.file) {
+      return res.status(400).json({ message: "Please provide all the required fields." });
+  }
+
+  const localFilePath = req.file.path;
+
+  try {
       const userId = getLoggedInUserId(req);
       const date = new Date();
+      const imageUrl = await uploadImage(localFilePath);
+
+      if (!imageUrl) {
+          return res.status(500).json({ message: 'Failed to upload image.' });
+      }
+
       await BlogModel.create({
-        creator: userId,
-        title: title,
-        content: content,
-        createdAt: date
-      })
-      res.status(200).json({success:true , message:"blog posted successfully."})
-    } catch (err) {
-      console.log(err)
-      res.status(500).json({message:"Some erorr occured while posting the blog."})
-    }
-}
+          creator: userId,
+          title: title,
+          content: content,
+          createdAt: date,
+          tile_image: imageUrl
+      });
+
+      res.status(200).json({ success: true, message: "Blog posted successfully." });
+  } catch (err) {
+      console.error('Error occurred while posting the blog:', err);
+      res.status(500).json({ message: "Some error occurred while posting the blog." });
+  }
+};
 
   const updateBlog = async (req,res) => {
     try {

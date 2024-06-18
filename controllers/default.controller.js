@@ -40,7 +40,7 @@ const registerUser = async (req, res) => {
         phone_number: phoneNumber,
         email: email,
         password: hashedPassword,
-        role:role
+        roles:role
         });
     
         res.status(201).json({ success: true, message: "User registered successfully" });

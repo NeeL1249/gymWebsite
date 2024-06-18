@@ -16,6 +16,10 @@ const BlogSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  tile_image : {
+    type: String,
+    required: true
   }
 });
 
