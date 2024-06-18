@@ -30,8 +30,8 @@ router.post('/login', validateUser, loginUser);
 router.post('/forgetPassword', checkIfUserExists, forgetPassword);
 router.post('/changePassword', checkIfUserRegistered, changePassword);
 router.post('/commentBlog/:blogId', checkIfUserRegistered, commentBlog);
+router.post('/replyComment/:commentId', checkIfUserRegistered, replyComment);
 router.patch('/editComment/:commentId', checkIfUserRegistered, checkIfCommentRelatedToUser, editComment);
-router.post('/replyComment/:commentId', checkIfUserRegistered, checkIfCommentRelatedToUser, replyComment);
 router.delete('/deleteComment/:commentId', checkIfUserRegistered, checkIfCommentRelatedToUser, deleteComment);
 router.post('/logout', logoutUser);
 

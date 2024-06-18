@@ -3,6 +3,8 @@ const { generateToken } = require('../utils/auth.utils')
 const queryModel = require('../models/query.model')
 const UserModel = require('../models/user.model')
 const BlogModel = require('../models/blog.model');
+const CommentModel = require('../models/comment.model');
+const { getLoggedInUserId } = require('../utils/auth.utils');
 const saltRounds = 10;
 
 const queries = async (req, res) => {
@@ -183,21 +185,23 @@ const loginUser = async (req, res) => {
   
 const commentBlog = async (req,res) => {
   try {
-    const { blogId,commentContent } = req.body;
+    const blogId = req.params.blogId;
+    const { commentContent } = req.body;
     console.log(req.body)
     const userId = getLoggedInUserId(req);
-    console.log(userId)
     
     const blog = await BlogModel.findById(blogId);
+    console.log(blog)
     const user = await UserModel.findById(userId);
 
-    const comment = {
+    const comment = await CommentModel.create({
       creator: userId,
       content: commentContent,
       createdAt: new Date()
-    };
-    console.log(user)
-    blog.comments.push(comment);
+    });
+    console.log(comment)
+    console.log(blog.comments)
+    blog.comments.push(comment._id);
     user.commentedPosts.push(blogId);
     await blog.save();
     await user.save();
@@ -210,17 +214,19 @@ const commentBlog = async (req,res) => {
 }
 
 const replyComment = async (req,res) => {
-const { commentId,replyContent } = req.body;
+  const commentId = req.params.commentId;
+const { replyContent } = req.body;
 try {
-  const comment = await BlogModel.comments.findById(commentId)
+  const comment = await CommentModel.findById(commentId)
   const userId = getLoggedInUserId(req)
   
-  const reply = new Comment({
+  const reply = await CommentModel.create({
     creator: userId,
     content: replyContent,
     createdAt: new Date()
   })
-  await reply.save()
+  console.log(comment)
+  console.log(reply)
 
   comment.replies.push(reply._id)
   await comment.save()

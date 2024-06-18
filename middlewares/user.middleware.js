@@ -1,4 +1,5 @@
 const { getLoggedInUserRole, getLoggedInUserId } = require("../utils/auth.utils");
+const CommentModel = require("../models/comment.model");
 const UserModel = require("../models/user.model");
 
 const validateUser = (req, res, next) => {
@@ -46,6 +47,7 @@ const checkIfCommentRelatedToUser = async (req, res, next) => {
   const userId = getLoggedInUserId(req);
   const commentId = req.params.commentId;
   const comment = await CommentModel.findById({ _id: commentId });
+  console.log(comment.creator.toString(), userId)
   if (comment.creator.toString() !== userId) {
     return res.status(401).json({ success: false, message: "You are not authorized to access this route" });
   }

@@ -1,5 +1,6 @@
 const BlogModel = require("../models/blog.model");
 const UserModel = require("../models/user.model");
+const PlanModel = require("../models/plan.model");
 const uploadImage = require('../utils/cloudinary');
 const { getLoggedInUserId } = require("../utils/auth.utils");
 
@@ -81,6 +82,7 @@ const createBlog = async (req, res) => {
   const createPlan = async(req,res) => { 
     const { name, description, price } = req.body;
     const features = req.body.features.split(",");
+    res.set('Content-Type', 'application/json');
     const localFilePath = req.file.path;
 
     if (!name || !description || !price || !features || !req.file) {
