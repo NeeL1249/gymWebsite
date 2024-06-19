@@ -14,8 +14,9 @@ const {
     replyComment, 
     deleteComment, 
     getPlans, 
-    getPlan } = require('../controllers/default.controller');
-const { validateUser , checkIfCommentRelatedToUser , checkIfUserRegistered , checkIfUserExists } = require('../middlewares/user.middleware');
+    getPlan,
+    verifyEmail } = require('../controllers/default.controller');
+const { validateUser , checkIfCommentRelatedToUser , checkIfUserRegistered , checkIfUserExists , isUserVerified } = require('../middlewares/user.middleware');
 
 const router = Router();
 
@@ -24,15 +25,16 @@ router.get('/getPlan/:planId', getPlan);
 router.get('/getBlogs', getBlogs);
 router.get('/getBlog/:blogId', getBlog);
 router.post('/queries', queries);
-router.patch('/editProfile', checkIfUserRegistered, editProfile);
+router.patch('/editProfile', checkIfUserRegistered, isUserVerified, editProfile);
 router.post('/register', registerUser);
+router.get('/verify-email', verifyEmail);
 router.post('/login', validateUser, loginUser);
 router.post('/forgetPassword', checkIfUserExists, forgetPassword);
-router.post('/changePassword', checkIfUserRegistered, changePassword);
-router.post('/commentBlog/:blogId', checkIfUserRegistered, commentBlog);
-router.post('/replyComment/:commentId', checkIfUserRegistered, replyComment);
-router.patch('/editComment/:commentId', checkIfUserRegistered, checkIfCommentRelatedToUser, editComment);
-router.delete('/deleteComment/:commentId', checkIfUserRegistered, checkIfCommentRelatedToUser, deleteComment);
+router.patch('/changePassword', checkIfUserRegistered, isUserVerified, changePassword);
+router.post('/commentBlog/:blogId', checkIfUserRegistered, isUserVerified, commentBlog);
+router.post('/replyComment/:commentId', checkIfUserRegistered, isUserVerified, replyComment);
+router.patch('/editComment/:commentId', checkIfUserRegistered, checkIfCommentRelatedToUser, isUserVerified, editComment);
+router.delete('/deleteComment/:commentId', checkIfUserRegistered, checkIfCommentRelatedToUser, isUserVerified, deleteComment);
 router.post('/logout', logoutUser);
 
 module.exports = router;

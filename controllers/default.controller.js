@@ -1,5 +1,7 @@
 const bcrypt = require('bcrypt')
 const { generateToken } = require('../utils/auth.utils')
+const nodemailer = require('nodemailer')
+const crypto = require('crypto')
 const queryModel = require('../models/query.model')
 const UserModel = require('../models/user.model')
 const BlogModel = require('../models/blog.model');
@@ -36,13 +38,39 @@ const registerUser = async (req, res) => {
         }
     
         const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+
         await UserModel.create({
-        name: name,
-        date_of_birth: dob,
-        phone_number: phoneNumber,
-        email: email,
-        password: hashedPassword,
-        roles:role
+          name: name,
+          date_of_birth: dob,
+          phone_number: phoneNumber,
+          email: email,
+          password: hashedPassword,
+          roles:role,
+          verification_token: verificationToken
+        });
+
+        const transporter = nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 587,
+          auth: {
+            user: process.env.EMAIL,
+            pass: process.env.SMTP_PASSWORD
+          }
+        });
+
+        const mailOptions = {
+          from: process.env.EMAIL,
+          to: email,
+          subject: 'Welcome to our platform',
+          text: `Please click on the following link to verify your email address: http://localhost:3000/api/verify-email?token=${verificationToken}`
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            return console.log(error);
+          }
+          console.log('Email sent: ' + info.response);
         });
     
         res.status(201).json({ success: true, message: "User registered successfully" });
@@ -59,6 +87,10 @@ const loginUser = async (req, res) => {
   
       if (!user) {
         return res.status(401).json({ success: false, message: "User not registered. Please register first." });
+      }
+
+      if (!user.is_verified) {
+        return res.status(401).json({ success: false, message: "Please verify your email first." });
       }
   
       const isMatch = await bcrypt.compare(password, user.password);
@@ -284,6 +316,26 @@ const getPlan = async (req,res) => {
   }
 }
 
+
+const verifyEmail = async (req, res) => {
+  const token = req.query.token;
+  try {
+    const result = await UserModel.findOne({ verification_token: token });
+
+    if (!result) {
+      return res.status(400).json({ message: 'Invalid token' });
+    } else {
+      result.is_verified = true;
+      result.verification_token = null;
+      await result.save();
+      res.status(200).json({ message: 'Email verified successfully' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = { 
   queries,
   registerUser, 
@@ -299,5 +351,6 @@ module.exports = {
   editComment,
   deleteComment,
   getPlans,
-  getPlan
+  getPlan,
+  verifyEmail
 };

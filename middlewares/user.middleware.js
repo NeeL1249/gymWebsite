@@ -54,4 +54,13 @@ const checkIfCommentRelatedToUser = async (req, res, next) => {
   next();
 }
 
-module.exports = { validateUser , checkIfAdmin , checkIfUserRegistered , checkIfUserExists , checkIfCommentRelatedToUser }
+const isUserVerified = async (req, res, next) => {
+  const userId = getLoggedInUserId(req);
+  const user = await UserModel.findById(userId);
+  if (!user.is_verified) {
+    return res.status(401).json({ success: false, message: "Please verify your email" });
+  }
+  next();
+}
+
+module.exports = { validateUser , checkIfAdmin , checkIfUserRegistered , checkIfUserExists , checkIfCommentRelatedToUser , isUserVerified }

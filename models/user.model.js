@@ -38,6 +38,13 @@ const UserSchema = new mongoose.Schema({
       enum: ['user','admin'],
       default: 'user'
     },
+    verification_token: {
+      type: String
+    },
+    is_verified: {
+      type: Boolean,
+      default: false
+    },
     commentedPosts: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Blog'
