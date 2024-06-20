@@ -5,7 +5,7 @@ const { getQueries, createBlog, updateBlog, deleteBlog, createPlan, updatePlan, 
 
 const router = Router();
 
-router.post('/postBlog', checkIfAdmin, upload.single('image'), createBlog);
+router.post('/postBlog', upload.single('image'), createBlog);
 router.get('/queries', checkIfAdmin, getQueries);
 router.patch('/:blogId/updateBlog', checkIfAdmin, updateBlog);
 router.delete('/:blogId/deleteBlog', checkIfAdmin, deleteBlog);

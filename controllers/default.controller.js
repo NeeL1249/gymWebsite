@@ -6,6 +6,8 @@ const queryModel = require('../models/query.model')
 const UserModel = require('../models/user.model')
 const BlogModel = require('../models/blog.model');
 const CommentModel = require('../models/comment.model');
+const PlanModel = require('../models/plan.model');
+const { getObjectSignedUrl } = require('../utils/aws.s3');
 const { getLoggedInUserId } = require('../utils/auth.utils');
 const saltRounds = 10;
 
@@ -191,7 +193,7 @@ const loginUser = async (req, res) => {
   const getBlog = async (req, res) => {
     try {
       const { blogId } = req.params;
-      const blog = await BlogModel.findById(blogId).populate('creator');
+      const blog = await BlogModel.findById(blogId).populate('comments');
       res.status(200).json({ success: true, blog });
     } catch (err) {
       console.log(err);
@@ -201,13 +203,21 @@ const loginUser = async (req, res) => {
   
   const getBlogs = async (req, res) => {
     try {
-      const blogs = await BlogModel.find().populate('creator');
-      res.status(200).json({ success: true, blogs });
+      let blogs = await BlogModel.find().sort('-createdAt');
+      
+      const blogsPromises = blogs.map(async (blog) => {
+        const imageUrl = await getObjectSignedUrl(blog.tile_image);
+        return { ...blog.toObject(), imageUrl };
+      });
+
+      const blogsWithImages = await Promise.all(blogsPromises);
+
+      res.status(200).json({ success: true, blogsWithImages });
     } catch (err) {
       console.log(err);
       res.status(500).json({ message: "Some error occurred while getting the blogs." });
     }
-  };
+};
 
   const logoutUser = async (req, res) => {
     res.clearCookie("token");

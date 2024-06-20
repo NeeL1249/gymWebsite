@@ -19,7 +19,6 @@ const generateToken = (user) => {
       throw new Error("User not authenticated");
     }
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-    console.log(decodedToken)
     return decodedToken.id;
   };
 

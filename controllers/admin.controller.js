@@ -1,8 +1,13 @@
 const BlogModel = require("../models/blog.model");
 const UserModel = require("../models/user.model");
+const path = require('path');
+const { PutObjectCommand } = require("@aws-sdk/client-s3")
+const sharp = require('sharp');
+const client = require("../utils/aws.s3");
 const PlanModel = require("../models/plan.model");
-const uploadImage = require('../utils/cloudinary');
+// const uploadImage = require('../utils/cloudinary');
 const { getLoggedInUserId } = require("../utils/auth.utils");
+const { cp } = require("fs");
 
 const getQueries = async (req,res) => {
     try {
@@ -15,23 +20,37 @@ const getQueries = async (req,res) => {
 }
 
 const createBlog = async (req, res) => {
+  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
   const { title, content } = req.body;
   
   res.set('Content-Type', 'application/json');
+
+  const filename = req.file.fieldname + '-' + uniqueSuffix + path.extname(req.file.originalname)
 
   if (!title || !content || !req.file) {
       return res.status(400).json({ message: "Please provide all the required fields." });
   }
 
-  const localFilePath = req.file.path;
-
   try {
       const userId = getLoggedInUserId(req);
       const date = new Date();
-      const imageUrl = await uploadImage(localFilePath);
 
-      if (!imageUrl) {
-          return res.status(500).json({ message: 'Failed to upload image.' });
+      const buffer = await sharp(req.file.buffer).resize({ width: 500, height: 500, fit: 'contain' }).toBuffer()
+
+      const params = {
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: `uploads/blogs/${filename}`,
+          Body: buffer,
+          ContentType: req.file.mimetype,
+      }
+
+      const command = new PutObjectCommand(params);
+
+      try{
+        await client.send(command);
+      } catch (err) {
+        console.log(err);
+        return res.status(500).json({ message: 'Failed to upload image.' });
       }
 
       await BlogModel.create({
@@ -39,7 +58,7 @@ const createBlog = async (req, res) => {
           title: title,
           content: content,
           createdAt: date,
-          tile_image: imageUrl
+          tile_image: `uploads/blogs/${filename}`
       });
 
       res.status(200).json({ success: true, message: "Blog posted successfully." });
