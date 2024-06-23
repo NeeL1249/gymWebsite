@@ -6,6 +6,7 @@ const queryModel = require('../models/query.model')
 const UserModel = require('../models/user.model')
 const BlogModel = require('../models/blog.model');
 const CommentModel = require('../models/comment.model');
+const ChallengeModel = require('../models/challenges.model');
 const PlanModel = require('../models/plan.model');
 const { getObjectSignedUrl } = require('../utils/aws.s3');
 const { getLoggedInUserId } = require('../utils/auth.utils');
@@ -194,7 +195,8 @@ const loginUser = async (req, res) => {
     try {
       const { blogId } = req.params;
       const blog = await BlogModel.findById(blogId).populate('comments');
-      res.status(200).json({ success: true, blog });
+      const imageUrl = await getObjectSignedUrl(blog.tile_image);
+      res.status(200).json({ success: true, blog ,imageUrl });
     } catch (err) {
       console.log(err);
       res.status(500).json({ message: "Some error occurred while getting the blog." });
@@ -307,8 +309,15 @@ try {
 
 const getPlans = async (req,res) => {
   try {
-    const plans = await PlanModel.find();
-    res.status(200).json({success:true,plans})
+    let plans = await PlanModelModel.find()
+      
+      const plansPromises = plans.map(async (plan) => {
+        const imageUrl = await getObjectSignedUrl(plan.tile_image);
+        return { ...plan.toObject(), imageUrl };
+      });
+
+      const plansWithImages = await Promise.all(plansPromises);
+    res.status(200).json({success:true,plansWithImages})
   } catch (error) {
     console.log(error)
     res.status(500).json({success:false,message:"Some error occured while getting the plans."})
@@ -319,13 +328,43 @@ const getPlan = async (req,res) => {
   try {
     const planId = req.params.planId;
     const plan = await PlanModel.findById(planId);
-    res.status(200).json({success:true,plan})
+    const imageUrl = await getObjectSignedUrl(plan.tile_image);
+    res.status(200).json({success:true,plan,imageUrl})
   } catch (error) {
     console.log(error)
     res.status(500).json({success:false,message:"Some error occured while getting the plan."})
   }
 }
 
+const getChallenges = async (req,res) => {
+  try {
+    let challenges = await ChallengeModel.find()
+      
+      const challengesPromises = challenges.map(async (challenge) => {
+        const imageUrl = await getObjectSignedUrl(challenge.tile_image);
+        return { ...challenge.toObject(), imageUrl };
+      });
+
+      const challengesWithImages = await Promise.all(challengesPromises);
+    res.status(200).json({success:true,challengesWithImages})
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({success:false,message:"Some error occured while getting the challenges."})
+  }
+}
+
+const getChallenge = async (req,res) => {
+  try {
+    const challengeId = req.params.challengeId;
+    const challenge = await ChallengeModel.findById(challengeId);
+    const imageUrl = await getObjectSignedUrl(challenge.tile_image);
+    res.status(200).json({success:true,challenge,imageUrl})
+  }
+  catch (error) {
+    console.log(error)
+    res.status(500).json({success:false,message:"Some error occured while getting the challenge."})
+  }
+}
 
 const verifyEmail = async (req, res) => {
   const token = req.query.token;
@@ -362,5 +401,7 @@ module.exports = {
   deleteComment,
   getPlans,
   getPlan,
+  getChallenges,
+  getChallenge,
   verifyEmail
 };
