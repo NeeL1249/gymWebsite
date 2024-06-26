@@ -1,10 +1,7 @@
 const BlogModel = require("../models/blog.model");
-const UserModel = require("../models/user.model");
 const ChallengeModel = require("../models/challenges.model");
 const path = require('path');
-const { PutObjectCommand , DeleteObjectCommand } = require("@aws-sdk/client-s3")
-const sharp = require('sharp');
-const { client } = require("../utils/aws.s3");
+const { uploadImage, deleteImage } = require("../utils/s3.utils");
 const PlanModel = require("../models/plan.model");
 const { getLoggedInUserId } = require("../utils/auth.utils");
 
@@ -25,6 +22,7 @@ const createBlog = async (req, res) => {
   res.set('Content-Type', 'application/json');
 
   const filename = req.file.fieldname + '-' + uniqueSuffix + path.extname(req.file.originalname)
+  const key = `uploads/blogs/${filename}`;
 
   if (!title || !content || !req.file) {
       return res.status(400).json({ message: "Please provide all the required fields." });
@@ -34,30 +32,14 @@ const createBlog = async (req, res) => {
       const userId = getLoggedInUserId(req);
       const date = new Date();
 
-      const buffer = await sharp(req.file.buffer).resize({ width: 500, height: 500, fit: 'contain' }).toBuffer()
-
-      const params = {
-          Bucket: process.env.AWS_BUCKET_NAME,
-          Key: `uploads/blogs/${filename}`,
-          Body: buffer,
-          ContentType: req.file.mimetype,
-      }
-
-      const command = new PutObjectCommand(params);
-
-      try{
-        await client.send(command);
-      } catch (err) {
-        console.log(err);
-        return res.status(500).json({ message: 'Failed to upload image.' });
-      }
+      await uploadImage(req.file, key);
 
       await BlogModel.create({
           creator: userId,
           title: title,
           content: content,
           createdAt: date,
-          tile_image: `uploads/blogs/${filename}`
+          tile_image: key
       });
 
       res.status(200).json({ success: true, message: "Blog posted successfully." });
@@ -67,7 +49,7 @@ const createBlog = async (req, res) => {
   }
 };
 
-  const updateBlog = async (req,res) => {
+const updateBlog = async (req,res) => {
     try {
       const blogId = req.params.blogId;
       const { title,content } = req.body;
@@ -89,26 +71,16 @@ const createBlog = async (req, res) => {
   const deleteBlog = async (req,res) => {
     try {
       const blogId = req.params.blogId;
-      await BlogModel.findById(blogId);
-      const params = {
-        Bucket: process.env.AWS_BUCKET_NAME,
-        Key: key,
-      }
-      const command = new DeleteObjectCommand(params);
-      try{
-        await client.send(command);
-      }
-      catch (err) {
-        console.log(err);
-        return res.status(500).json({ message: 'Failed to delete image.' });
-      }
+      const blog = await BlogModel.findById(blogId);
+      const key = blog.tile_image;
+      await deleteImage(key);
       await BlogModel.findByIdAndDelete(blogId);
       res.status(200).json({success:true,message:"Blog deleted successfully."})
     } catch (err) {
       console.log(err)
       res.status(500).json({message:"Some error occured while deleting the blog."})
     }
-  }
+}
 
   const createPlan = async(req,res) => { 
   const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -116,33 +88,14 @@ const createBlog = async (req, res) => {
     const features = req.body.features.split(",");
     res.set('Content-Type', 'application/json');
     const filename = req.file.fieldname + '-' + uniqueSuffix + path.extname(req.file.originalname)
-    
+    const key = `uploads/plans/${filename}`;
 
     if (!name || !description || !price || !features || !req.file) {
         return res.status(400).json({ message: "Please provide all the required fields." });
     }
 
     try {
-        const key = `uploads/plans/${filename}`;
-
-        const buffer = await sharp(req.file.buffer).resize({ width: 500, height: 500, fit: 'contain' }).toBuffer()
-
-        const params = {
-            Bucket: process.env.AWS_BUCKET_NAME,
-            Key: key,
-            Body: buffer,
-            ContentType: req.file.mimetype,
-        }
-
-        const command = new PutObjectCommand(params);
-
-        try{
-          await client.send(command);
-        }
-        catch (err) {
-          console.log(err);
-          return res.status(500).json({ message: 'Failed to upload image.' });
-        }
+        await uploadImage(req.file, key);
 
         await PlanModel.create({
             name: name,
@@ -188,19 +141,9 @@ const createBlog = async (req, res) => {
   const deletePlan = async(req,res) => {
     try {
       const planId = req.params.planId;
-      await PlanModel.findById(planId);
-      const params = {
-        Bucket: process.env.AWS_BUCKET_NAME,
-        Key: key,
-      }
-      const command = new DeleteObjectCommand(params);
-      try{
-        await client.send(command);
-      }
-      catch (err) {
-        console.log(err);
-        return res.status(500).json({ message: 'Failed to delete image.' });
-      }
+      const plan = await PlanModel.findById(planId);
+      const key = plan.tile_image;
+      await deleteImage(key);
       await PlanModel.findByIdAndDelete(planId);
       res.status(200).json({success:true,message:"Plan deleted successfully."})
     } catch (err) {
@@ -215,23 +158,9 @@ const createBlog = async (req, res) => {
     const exercises = req.body.exercises.split(",");
     res.set('Content-Type', 'application/json');
     const filename = req.file.fieldname + '-' + uniqueSuffix + path.extname(req.file.originalname)
+    const key = `uploads/challenges/${filename}`;
     try {
-      const key = `uploads/challenges/${filename}`;
-      const buffer = await sharp(req.file.buffer).resize({ width: 500, height: 500, fit: 'contain' }).toBuffer()
-      const params = {
-          Bucket: process.env.AWS_BUCKET_NAME,
-          Key: key,
-          Body: buffer,
-          ContentType: req.file.mimetype,
-      }
-      const command = new PutObjectCommand(params);
-      try{
-        await client.send(command);
-      }
-      catch (err) {
-        console.log(err);
-        return res.status(500).json({ message: 'Failed to upload image.' });
-      }
+      await uploadImage(req.file, key);
       await ChallengeModel.create({
           title: title,
           description: description,
@@ -272,19 +201,9 @@ const createBlog = async (req, res) => {
   const deleteChallenges = async(req,res) => {
     try {
       const challengeId = req.params.challengeId;
-      await ChallengeModel.findById(challengeId);
-      const params = {
-        Bucket: process.env.AWS_BUCKET_NAME,
-        Key: key,
-      }
-      const command = new DeleteObjectCommand(params);
-      try{
-        await client.send(command);
-      }
-      catch (err) {
-        console.log(err);
-        return res.status(500).json({ message: 'Failed to delete image.' });
-      }
+      const challenge = await ChallengeModel.findById(challengeId);
+      const key = challenge.tile_image;
+      await deleteImage(key);
       await ChallengeModel.findByIdAndDelete(challengeId);
 
       res.status(200).json({success:true,message:"Challenge deleted successfully."})

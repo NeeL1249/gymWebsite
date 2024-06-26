@@ -3,16 +3,16 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 require('dotenv').config();
 
 const client = new S3Client({
-    region: process.env.AWS_REGION,
+    region: process.env.REGION,
     credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+        accessKeyId: process.env.ACCESS_KEY,
+        secretAccessKey: process.env.SECRET_ACCESS_KEY
     }
 });
 
 const getObjectSignedUrl = async (key) => {
     const command = new GetObjectCommand({
-        Bucket: process.env.AWS_BUCKET_NAME,
+        Bucket: process.env.BUCKET_NAME,
         Key: key
     });
 

@@ -1,5 +1,5 @@
-const bcrypt = require('bcrypt')
-const { generateToken } = require('../utils/auth.utils')
+const bcrypt = require('bcryptjs')
+const { generateAccessToken, generateRefreshToken } = require('../utils/auth.utils')
 const nodemailer = require('nodemailer')
 const crypto = require('crypto')
 const queryModel = require('../models/query.model')
@@ -8,8 +8,11 @@ const BlogModel = require('../models/blog.model');
 const CommentModel = require('../models/comment.model');
 const ChallengeModel = require('../models/challenges.model');
 const PlanModel = require('../models/plan.model');
+const RefreshToken = require('../models/refreshToken.model');
 const { getObjectSignedUrl } = require('../utils/aws.s3');
 const { getLoggedInUserId } = require('../utils/auth.utils');
+const setUpdatedFields = require('../utils/updateFields');
+const PasswordResetModel = require('../models/passwordReset.model');
 const saltRounds = 10;
 
 const queries = async (req, res) => {
@@ -84,57 +87,37 @@ const registerUser = async (req, res) => {
 }
 
 const loginUser = async (req, res) => {
+  try {
     const { email, password } = req.body;
-    try {
-      const user = await UserModel.findOne({ email });
-  
-      if (!user) {
-        return res.status(401).json({ success: false, message: "User not registered. Please register first." });
-      }
+    const user = await UserModel.findOne({ email });
 
-      if (!user.is_verified) {
-        return res.status(401).json({ success: false, message: "Please verify your email first." });
-      }
-  
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(401).json({ success: false, message: "Incorrect Password" });
-      }
-  
-      const token = generateToken(user);
-      res.cookie("token", token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "Strict",
-        maxAge: 365 * 24 * 60 * 60 * 1000,
-      });
-  
-      res.status(200).json({
-        success: true,
-        message: "User logged in successfully",
-        userId: user._id,
-        token,
-      });
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({ success: false, message: "An error occurred while logging in" });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
+
+    const accessToken = generateAccessToken(user);
+    const refreshToken = await generateRefreshToken(user);
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.json({ success: true, accessToken });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "An error occurred during login" });
   }
+};
 
   const editProfile = async (req,res) => {
     try {
       const userId = getLoggedInUserId(req);
       const { name, dob, phoneNumber } = req.body;
       const user = await UserModel.findById(userId);
-      if(name !== undefined){
-        user.name = name;
-      }
-      if(dob !== undefined){
-        user.date_of_birth = dob;
-      }
-      if(phoneNumber !== undefined){
-        user.phone_number = phoneNumber;
-      }
+      setUpdatedFields(user, { name, date_of_birth: dob, phone_number: phoneNumber });
       await user.save();
       res.status(200).json({success:true,message:"Profile updated successfully."})
     } catch (err) {
@@ -143,29 +126,69 @@ const loginUser = async (req, res) => {
     }
   }
   
-  
-
   const forgetPassword = async (req,res) => {
     try {
       const { email } = req.body;
       const user = await UserModel.findOne({ email });
-
       if (!user) {
         return res.status(401).json({ success: false, message: "User not registered. Please register first." });
       }
-
-      const token = generateToken(user);
-      res.cookie("token", token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "Strict",
-        maxAge: 365 * 24 * 60 * 60 * 1000,
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      
+      await PasswordResetModel.create({
+        email: email,
+        token: resetToken,
+        expiry: new Date(Date.now() + 3600000)
       });
 
-      res.status(200).json({ success: true, message: "Token sent to email" });
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        auth: {
+          user: process.env.EMAIL,
+          pass: process.env.SMTP_PASSWORD
+        }
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL,
+        to: email,
+        subject: 'Reset Password',
+        text: `Please click on the following link to reset your password: http://localhost:3000/api/reset-password?token=${resetToken}`
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          return console.log(error);
+        }
+        console.log('Email sent: ' + info.response);
+      }
+      );
+      res.status(200).json({ success: true, message: "Password reset link sent to your email" });
     } catch (err) {
       console.log(err);
-      res.status(500).json({ success: false, message: "An error occurred while sending the token" });
+      res.status(500).json({ success: false, message: "An error occurred while resetting the password" });
+    }
+  }
+
+  const resetPassword = async (req,res) => {
+    try {
+      const token = req.query.token;
+      const { password } = req.body;
+      const reset = await PasswordResetModel.findOne({ token });
+      console.log(reset)
+      if (!reset) {
+        return res.status(401).json({ success: false, message: "Invalid or expired token" });
+      }
+      const user = await UserModel.findOne({ email: reset.email });
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      user.password = hashedPassword;
+      await user.save();
+      await PasswordResetModel.deleteOne({ token });
+      res.status(200).json({ success: true, message: "Password reset successfully" });
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ success: false, message: "An error occurred while resetting the password" });
     }
   }
 
@@ -221,10 +244,16 @@ const loginUser = async (req, res) => {
     }
 };
 
-  const logoutUser = async (req, res) => {
-    res.clearCookie("token");
-    res.status(200).json({ success: true, message: "User logged out successfully" });
-  };
+const logoutUser = async (req, res) => {
+  const { refreshToken } = req.cookies;
+
+  if (refreshToken) {
+    await RefreshToken.deleteOne({ token: refreshToken });
+  }
+
+  res.clearCookie('refreshToken');
+  res.json({ success: true, message: "Logged out successfully" });
+};
 
   
 const commentBlog = async (req,res) => {
@@ -309,7 +338,7 @@ try {
 
 const getPlans = async (req,res) => {
   try {
-    let plans = await PlanModelModel.find()
+    let plans = await PlanModel.find()
       
       const plansPromises = plans.map(async (plan) => {
         const imageUrl = await getObjectSignedUrl(plan.tile_image);
@@ -392,6 +421,7 @@ module.exports = {
   editProfile,
   changePassword, 
   forgetPassword, 
+  resetPassword,
   getBlog, 
   getBlogs, 
   logoutUser,
