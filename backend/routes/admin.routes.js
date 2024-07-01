@@ -1,7 +1,6 @@
 const {Router} = require('express');
 const upload = require('../middlewares/multer.middleware');
-const { checkIfAdmin } = require('../middlewares/user.middleware');
-const { verifyToken } = require('../middlewares/user.middleware');
+const { checkIfAdmin, verifyToken } = require('../middlewares/auth.middleware');
 const { getQueries, createBlog, updateBlog, deleteBlog, createPlan, updatePlan, deletePlan, createChallenges, updateChallenges, deleteChallenges } = require('../controllers/admin.controller');
 
 const router = Router();

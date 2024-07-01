@@ -286,31 +286,6 @@ const commentBlog = async (req,res) => {
   }
 }
 
-const replyComment = async (req,res) => {
-  const commentId = req.params.commentId;
-const { replyContent } = req.body;
-try {
-  const comment = await CommentModel.findById(commentId)
-  const userId = getLoggedInUserId(req)
-  
-  const reply = await CommentModel.create({
-    creator: userId,
-    content: replyContent,
-    createdAt: new Date()
-  })
-  console.log(comment)
-  console.log(reply)
-
-  comment.replies.push(reply._id)
-  await comment.save()
-
-  res.status(200).json({success:true,message:"Replied to the comment successfully"})
-} catch (error) {
-  console.log(error)
-  res.status(500).json({success:false, message:"Some Error Occured while replying."})
-}
-}
-
 const editComment = async (req,res) => {
 try {
   const commentId = req.params.commentId;
@@ -426,7 +401,6 @@ module.exports = {
   getBlogs, 
   logoutUser,
   commentBlog,
-  replyComment,
   editComment,
   deleteComment,
   getPlans,

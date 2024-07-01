@@ -10,9 +10,9 @@ const path = require('path')
 require('dotenv').config();
 
 const _dirname = path.resolve();
-const buildpath = path.resolve(_dirname, '../Frontend', 'dist')
+const buildpath = path.resolve(_dirname, '../gymWebsite/Frontend', 'dist')
 
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.MONGO_URI)
 .then(() => console.log('MongoDB connected successfully'))
 .catch(err => console.log('MongoDB connection error:', err));
 

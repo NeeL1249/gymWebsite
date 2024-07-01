@@ -11,13 +11,12 @@ const {
     getBlogs, 
     logoutUser, 
     commentBlog, 
-    editComment, 
-    replyComment, 
+    editComment,  
     deleteComment, 
     getPlans, 
     getPlan,
     verifyEmail } = require('../controllers/default.controller');
-const { verifyToken, validateUser , checkIfCommentRelatedToUser , checkIfUserRegistered , checkIfUserExists , isUserVerified } = require('../middlewares/user.middleware');
+const { verifyToken, validateUser , checkIfCommentRelatedToUser , checkIfUserRegistered , checkIfUserExists , isUserVerified } = require('../middlewares/auth.middleware');
 
 const router = Router();
 
@@ -34,7 +33,6 @@ router.post('/forgetPassword', checkIfUserExists, forgetPassword);
 router.post('/resetPassword', resetPassword);
 router.patch('/changePassword', verifyToken, checkIfUserRegistered, isUserVerified, changePassword);
 router.post('/commentBlog/:blogId', verifyToken, checkIfUserRegistered, isUserVerified, commentBlog);
-router.post('/replyComment/:commentId', verifyToken, checkIfUserRegistered, isUserVerified, replyComment);
 router.patch('/editComment/:commentId', verifyToken, checkIfUserRegistered, checkIfCommentRelatedToUser, isUserVerified, editComment);
 router.delete('/deleteComment/:commentId', verifyToken, checkIfUserRegistered, checkIfCommentRelatedToUser, isUserVerified, deleteComment);
 router.post('/logout', logoutUser);
