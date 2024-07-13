@@ -3,9 +3,10 @@ const ChallengeModel = require("../models/challenges.model");
 const path = require('path');
 const { uploadImage, deleteImage } = require("../utils/s3.utils");
 const PlanModel = require("../models/plan.model");
-const { getLoggedInUserId } = require("../utils/auth.utils");
+const AuthUtils = require("../utils/auth.utils");
 
-const getQueries = async (req,res) => {
+class QueryController {
+  static async getQueries (req,res) {
     try {
       const queries = await QueryModel.find();
       res.status(200).json({success:true,queries})
@@ -13,43 +14,44 @@ const getQueries = async (req,res) => {
       console.log(err)
       res.status(500).json({message:"Some error occured while fetching the queries."})
     }
+  }
 }
 
-const createBlog = async (req, res) => {
-  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-  const { title, content } = req.body;
+class BlogController {
+  static async createBlog(req, res) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const { title, content } = req.body;
+    
+    res.set('Content-Type', 'application/json');
   
-  res.set('Content-Type', 'application/json');
-
-  const filename = req.file.fieldname + '-' + uniqueSuffix + path.extname(req.file.originalname)
-  const key = `uploads/blogs/${filename}`;
-
-  if (!title || !content || !req.file) {
-      return res.status(400).json({ message: "Please provide all the required fields." });
-  }
-
-  try {
-      const userId = getLoggedInUserId(req);
+    const filename = req.file.fieldname + '-' + uniqueSuffix + path.extname(req.file.originalname)
+    const key = `uploads/blogs/${filename}`;
+  
+    if (!title || !content || !req.file) {
+        return res.status(400).json({ message: "Please provide all the required fields." });
+    }
+  
+    try {
+      const userId = AuthUtils.getLoggedInUserId(req);
       const date = new Date();
 
       await uploadImage(req.file, key);
-
       await BlogModel.create({
-          creator: userId,
-          title: title,
-          content: content,
-          createdAt: date,
-          tile_image: key
+        creator: userId,
+        title: title,
+        content: content,
+        createdAt: date,
+        tile_image: key
       });
-
+  
       res.status(200).json({ success: true, message: "Blog posted successfully." });
-  } catch (err) {
-      console.error('Error occurred while posting the blog:', err);
-      res.status(500).json({ message: "Some error occurred while posting the blog." });
-  }
-};
-
-const updateBlog = async (req,res) => {
+    } catch (err) {
+        console.error('Error occurred while posting the blog:', err);
+        res.status(500).json({ message: "Some error occurred while posting the blog." });
+    }
+  };
+  
+  static async updateBlog(req,res){
     try {
       const blogId = req.params.blogId;
       const { title,content } = req.body;
@@ -61,14 +63,14 @@ const updateBlog = async (req,res) => {
         blog.content = content;
       }
       await blog.save();
-      res.status(200).json({success:true,message:"Blog updated successfully."})
+      res.status(200).json({success:true,message:"Blog updated successfully."});
     } catch (err) {
-      console.log(err)
-      res.status(500).json({message:"Some error occured while updating the blog."})
+      console.log(err);
+      res.status(500).json({message:"Some error occured while updating the blog."});
     }
-  }
-
-  const deleteBlog = async (req,res) => {
+  };
+  
+  static async deleteBlog(req,res){
     try {
       const blogId = req.params.blogId;
       const blog = await BlogModel.findById(blogId);
@@ -80,39 +82,40 @@ const updateBlog = async (req,res) => {
       console.log(err)
       res.status(500).json({message:"Some error occured while deleting the blog."})
     }
+  }
 }
 
-  const createPlan = async(req,res) => { 
-  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+class PlanController {
+  static async createPlan(req,res){ 
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const { name, description, price } = req.body;
     const features = req.body.features.split(",");
     res.set('Content-Type', 'application/json');
     const filename = req.file.fieldname + '-' + uniqueSuffix + path.extname(req.file.originalname)
     const key = `uploads/plans/${filename}`;
-
+  
     if (!name || !description || !price || !features || !req.file) {
         return res.status(400).json({ message: "Please provide all the required fields." });
     }
-
     try {
-        await uploadImage(req.file, key);
+      await uploadImage(req.file, key);
 
-        await PlanModel.create({
-            name: name,
-            description: description,
-            price: price,
-            features: features,
-            tile_image: key
-        });
-
-        res.status(200).json({ success: true, message: "Plan created successfully." });
+      await PlanModel.create({
+        name: name,
+        description: description,
+        price: price,
+        features: features,
+        tile_image: key
+      });
+      
+      res.status(200).json({ success: true, message: "Plan created successfully." });
     } catch (err) {
         console.error('Error occurred while creating the plan:', err);
         res.status(500).json({ message: "Some error occurred while creating the plan." });
     }
   }
-
-  const updatePlan = async(req,res) => {
+  
+  static async updatePlan (req,res){
     try {
       const planId = req.params.planId;
       const { name,description,price,features } = req.body;
@@ -131,14 +134,13 @@ const updateBlog = async (req,res) => {
       }
       await plan.save();
       res.status(200).json({success:true,message:"Plan updated successfully."})
-    }
-    catch (err) {
+    } catch (err) {
       console.log(err)
       res.status(500).json({message:"Some error occured while updating the plan."})
     }
   }
-
-  const deletePlan = async(req,res) => {
+  
+  static async deletePlan (req,res){
     try {
       const planId = req.params.planId;
       const plan = await PlanModel.findById(planId);
@@ -151,8 +153,10 @@ const updateBlog = async (req,res) => {
       res.status(500).json({message:"Some error occured while deleting the plan."})
     }
   }
+}
 
-  const createChallenges = async(req,res) => {
+class ChallengeController {
+  static async createChallenges(req,res){
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const { title,description } = req.body;
     const exercises = req.body.exercises.split(",");
@@ -175,7 +179,7 @@ const updateBlog = async (req,res) => {
     }
   }
 
-  const updateChallenges = async(req,res) => {
+  static async updateChallenges(req,res){
     try {
       const challengeId = req.params.challengeId;
       const { title,description,exercises } = req.body;
@@ -198,7 +202,7 @@ const updateBlog = async (req,res) => {
     }
   }
 
-  const deleteChallenges = async(req,res) => {
+  static async deleteChallenges(req,res){
     try {
       const challengeId = req.params.challengeId;
       const challenge = await ChallengeModel.findById(challengeId);
@@ -212,16 +216,11 @@ const updateBlog = async (req,res) => {
       res.status(500).json({message:"Some error occured while deleting the challenge."})
     }
   }
+}
 
-  module.exports = {
-    getQueries,
-    createBlog,
-    updateBlog,
-    deleteBlog,
-    createPlan,
-    updatePlan,
-    deletePlan,
-    createChallenges,
-    updateChallenges,
-    deleteChallenges
-  };
+module.exports = {
+  QueryController,
+  BlogController,
+  PlanController,
+  ChallengeController
+};

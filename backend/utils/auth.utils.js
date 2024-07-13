@@ -2,7 +2,8 @@ const jwt = require("jsonwebtoken");
 const RefreshToken = require("../models/refreshToken.model");
 const rateLimit = require("express-rate-limit");
 
-const generateToken = (user) => {
+class AuthUtils {
+  static generateToken = (user) => {
     const payload = {
       id: user._id,
       role: user.roles
@@ -15,7 +16,7 @@ const generateToken = (user) => {
     return jwt.sign(payload, secret, options);
   };
   
-  const getLoggedInUserId = (req) => {
+  static getLoggedInUserId = (req) => {
     const token = req.headers["authorization"].split(" ")[1];
     if (!token) {
       throw new Error("User not authenticated");
@@ -24,7 +25,7 @@ const generateToken = (user) => {
     return decodedToken.userId;
   };
 
-  const getLoggedInUserRole = (req) => {
+  static getLoggedInUserRole = (req) => {
     const token = req.headers.cookie.split("=")[1];
     if (!token) {
       throw new Error("User not authenticated");
@@ -34,18 +35,18 @@ const generateToken = (user) => {
     return decodedToken.role;
   }
 
-  const authLimiter = rateLimit({
+  static authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
     message: "You have exceeded the 100 requests in 15 minutes limit!",
     headers: true,
   });
 
-  const generateAccessToken = (user) => {
+  static generateAccessToken = (user) => {
     return jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '15m' });
   };
   
-  const generateRefreshToken = async (user) => {
+  static generateRefreshToken = async (user) => {
     console.log(user)
     const refreshToken = jwt.sign({ userId: user._id }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
     
@@ -57,5 +58,5 @@ const generateToken = (user) => {
   
     return refreshToken;
   };
-
-  module.exports = { generateToken, getLoggedInUserId, getLoggedInUserRole, authLimiter, generateAccessToken, generateRefreshToken};
+}
+  module.exports = AuthUtils;
